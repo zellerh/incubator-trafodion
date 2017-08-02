@@ -314,10 +314,14 @@ CREATE TABLE if not exists TRAFODION.MINOTAUR.EVENTS_LOAD75
   hbase_options (blockcache = 'TRUE', TTL = '1000')
 ;
 
+cqd parallel_num_esps '5';
+
 prepare s from
 select * from minotaur.events_load75<<+ cardinality 10e6 >>  where srcip = '120.120.120.1' and agentreceipttime = timestamp '2014-05-28 15:10:33';
 
 execute s;
+
+cqd parallel_num_esps reset;
 
 showddl TRAFODION.MINOTAUR.EVENTS_LOAD75;
 

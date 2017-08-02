@@ -10337,6 +10337,10 @@ _SALT_      A            B           C            D
 
 --- SQL operation complete.
 >>
+>>cqd parallel_num_esps '5';
+
+--- SQL operation complete.
+>>
 >>prepare s from
 +>select * from minotaur.events_load75<<+ cardinality 10e6 >>  where srcip = '120.120.120.1' and agentreceipttime = timestamp '2014-05-28 15:10:33';
 
@@ -10345,6 +10349,10 @@ _SALT_      A            B           C            D
 >>execute s;
 
 --- 0 row(s) selected.
+>>
+>>cqd parallel_num_esps reset;
+
+--- SQL operation complete.
 >>
 >>showddl TRAFODION.MINOTAUR.EVENTS_LOAD75;
 
@@ -10438,7 +10446,8 @@ CREATE INDEX T010IX1 ON TRAFODION.SCH.T010T4
 LC   RC   OP   OPERATOR              OPT       DESCRIPTION           CARD
 ---- ---- ---- --------------------  --------  --------------------  ---------
 
-1    .    2    root                                                  1.00E+009
+2    .    3    root                                                  1.00E+009
+1    .    2    esp_exchange                    1:4(hash2)            1.00E+009
 .    .    1    trafodion_index_scan            T010IX1               1.00E+009
 
 --- SQL operation complete.
