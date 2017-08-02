@@ -3903,6 +3903,8 @@ enum DefaultConstants
   // This default is for internal testing usage only and not externalized.
   HIVE_NO_REGISTER_OBJECTS,
 
+  NCM_HBASE_LIMIT_DOP_IN_COSTING,
+
   // This enum constant must be the LAST one in the list; it's a count,
   // not an Attribute (it's not IN DefaultDefaults; it's the SIZE of it)!
   __NUM_DEFAULT_ATTRIBUTES

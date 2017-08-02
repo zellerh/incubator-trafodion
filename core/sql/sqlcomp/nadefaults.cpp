@@ -2484,6 +2484,7 @@ SDDkwd__(ISO_MAPPING,           (char *)SQLCHARSETSTRING_ISO88591),
   DDflt__(NCM_EXCH_MERGE_FACTOR,                "0.10"), // change to 0.10
   DDkwd__(NCM_EXCH_NDCS_FIX,                    "ON"), // change to ON
   DDkwd__(NCM_HBASE_COSTING,                    "ON"), // change to ON
+  DDkwd__(NCM_HBASE_LIMIT_DOP_IN_COSTING,       "ON"),
   DDkwd__(NCM_HGB_OVERFLOW_COSTING,		"ON"),
   DDkwd__(NCM_HJ_OVERFLOW_COSTING,		"ON"),
   DDflt__(NCM_IND_JOIN_COST_ADJ_FACTOR,         "1.0"),
