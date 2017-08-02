@@ -1237,15 +1237,27 @@ FileScanOptimizer::scmComputeMDAMCostForHbase(
   tcProdInHCS *= outputRowSizeFactor;
   tcRcvdByHCS *= rowSizeFactor;
 
-  // normalize it by #region servers for HRS
   CollIndex HRSPartitions = getEstNumActivePartitionsAtRuntimeForHbaseRegions();
+  CollIndex HCSPartitions = getEstNumActivePartitionsAtRuntime();
+
+  if (CmpCommon::getDefault(NCM_HBASE_LIMIT_DOP_IN_COSTING) == DF_ON)
+    {
+      // The effective DoP for both the region server and client sides is
+      // the minimum of the two: If there are fewer regions than clients
+      // (ESPs), then some ESPs have nothing to do. If there are more
+      // regions than clients, the clients will process multiple regions
+      // sequentially, limiting the DoP on the region servers.
+      HRSPartitions =
+      HCSPartitions = MINOF(HRSPartitions, HCSPartitions);
+    }
+
+  // normalize it by #region servers for HRS
   tcProcInHRS = (tcProcInHRS / HRSPartitions).getCeiling();
   tcProdInHRS = (tcProdInHRS / HRSPartitions).getCeiling();
   seqIOsInHRS = (seqIOsInHRS / HRSPartitions).getCeiling();
   randomIOsInHRS = (randomIOsInHRS / HRSPartitions).getCeiling();
 
   // normalize it by DoP for HCS
-  CollIndex HCSPartitions = getEstNumActivePartitionsAtRuntime();
   tcProcInHCS = (tcProcInHCS / HCSPartitions).getCeiling();
   tcProdInHCS = (tcProdInHCS / HCSPartitions).getCeiling();
   tcRcvdByHCS = (tcRcvdByHCS / HCSPartitions).getCeiling();
@@ -1338,16 +1350,31 @@ SimpleFileScanOptimizer::scmComputeCostVectorsForHbase()
   setEstRowsAccessed(getSingleSubsetSize());
   setNumberOfBlocksToReadPerAccess(seqIOsInHRS);
 
-  // normalize it by #region servers for HRS
   CollIndex HRSPartitions = getEstNumActivePartitionsAtRuntimeForHbaseRegions();
+  CollIndex HCSPartitions = getEstNumActivePartitionsAtRuntime();
+
+  if (costParPlanSameAsSer)
+    {
+      HRSPartitions =
+      HCSPartitions = 1;
+    }
+  else if (CmpCommon::getDefault(NCM_HBASE_LIMIT_DOP_IN_COSTING) == DF_ON)
+    {
+      // The effective DoP for both the region server and client sides is
+      // the minimum of the two: If there are fewer regions than clients
+      // (ESPs), then some ESPs have nothing to do. If there are more
+      // regions than clients, the clients will process multiple regions
+      // sequentially, limiting the DoP on the region servers.
+      HRSPartitions =
+      HCSPartitions = MINOF(HRSPartitions, HCSPartitions);
+    }
+
+  // normalize it by #region servers for HRS
   tcProcInHRS = (tcProcInHRS / HRSPartitions).getCeiling();
   tcProdInHRS = (tcProdInHRS / HRSPartitions).getCeiling();
   seqIOsInHRS = (seqIOsInHRS / HRSPartitions).getCeiling();
 
   // normalize it by DoP for HCS
-  CollIndex HCSPartitions = getEstNumActivePartitionsAtRuntime();
-  if (costParPlanSameAsSer)
-    HCSPartitions = 1;
   tcProcInHCS = (tcProcInHCS / HCSPartitions).getCeiling();
   tcProdInHCS = (tcProdInHCS / HCSPartitions).getCeiling();
   tcRcvdByHCS = (tcRcvdByHCS / HCSPartitions).getCeiling();
@@ -1436,6 +1463,19 @@ SimpleFileScanOptimizer::scmComputeCostVectorsMultiProbesForHbase()
   tcProdInHRS = getResultSetCardinality();
 
   CollIndex HRSPartitions = getEstNumActivePartitionsAtRuntimeForHbaseRegions();
+  CollIndex HCSPartitions = getEstNumActivePartitionsAtRuntime();
+
+  if (CmpCommon::getDefault(NCM_HBASE_LIMIT_DOP_IN_COSTING) == DF_ON)
+    {
+      // The effective DoP for both the region server and client sides is
+      // the minimum of the two: If there are fewer regions than clients
+      // (ESPs), then some ESPs have nothing to do. If there are more
+      // regions than clients, the clients will process multiple regions
+      // sequentially, limiting the DoP on the region servers.
+      HRSPartitions =
+      HCSPartitions = MINOF(HRSPartitions, HCSPartitions);
+    }
+
   // 52 blocks cache per region
   // Assumption : heap size of RS = 8GB
   // data block cache = 20% * 8GB => 1.6GB
@@ -1550,6 +1590,10 @@ SimpleFileScanOptimizer::scmComputeCostVectorsMultiProbesForHbase()
   tcProdInHCS *= outputRowSizeFactor;
   tcRcvdByHCS *= rowSizeFactor;
 
+  if (costParPlanSameAsSer)
+    HRSPartitions =
+    HCSPartitions = 1;
+
   // normalize it by #region servers for HRS
   tcProcInHRS = (tcProcInHRS / HRSPartitions).getCeiling();
   tcProdInHRS = (tcProdInHRS / HRSPartitions).getCeiling();
@@ -1557,10 +1601,6 @@ SimpleFileScanOptimizer::scmComputeCostVectorsMultiProbesForHbase()
   randIOsInHRS = (randIOsInHRS / HRSPartitions).getCeiling();
 
   // normalize it by DoP for HCS
-  CollIndex HCSPartitions = getEstNumActivePartitionsAtRuntime();
-  if (costParPlanSameAsSer)
-    HCSPartitions = 1;
-
   tcProcInHCS = (tcProcInHCS / HCSPartitions).getCeiling();
   tcProdInHCS = (tcProdInHCS / HCSPartitions).getCeiling();
 
