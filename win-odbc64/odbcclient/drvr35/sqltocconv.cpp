@@ -539,9 +539,9 @@ unsigned long ODBC::ConvertSQLToC(SQLINTEGER	ODBCAppVersion,
 			break;
 		case SQL_BIGINT:
 			if (srcUnsigned)
-				_snprintf(cTmpBuf, sizeof(__int64), "%I64u", *((unsigned __int64 *)srcDataPtr));
+				sprintf(cTmpBuf, "%I64u", *((unsigned __int64 *)srcDataPtr));
 			else
-				_snprintf(cTmpBuf, sizeof(__int64), "%I64d", *((__int64 *)srcDataPtr));
+				sprintf(cTmpBuf, "%I64d", *((__int64 *)srcDataPtr));
 			DataLen = strlen(cTmpBuf);
 			if (DataLen > targetLength)
 				return IDS_22_003;
@@ -3445,7 +3445,10 @@ unsigned long ODBC::ConvertSQLToC(SQLINTEGER	ODBCAppVersion,
 			}
 			else
 			{
-				DataLen = charlength-Offset;
+				if (srcCharSet == SQLCHARSETCODE_UCS2)
+					DataLen = charlength / 2 - Offset;
+				else
+					DataLen = charlength - Offset;
 				if (DataLen >= targetLength)
 				{
 					DataLenTruncated = DataLen;

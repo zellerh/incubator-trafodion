@@ -407,7 +407,6 @@ struct execute {
     size_t fsl;                 /* field separator length */
     size_t r;                   /* initial rowset, 'Z' thread: key section length */
     size_t ar;                  /* "actual" rowset (could be < r at the end) */
-    size_t AlreadyLoadRows;     /* already load rows */
     size_t rbs;                 /* rowset buffer size, Z thread: "actual" rowset for tgt threads */
     size_t s;                   /* rowbuffer length (includes data & indicator) */
     size_t sbl;                 /* allocated splitby buffer length (if !=0 grandfather should free etab[].sb) */
@@ -3664,7 +3663,7 @@ Please note the fixed length '6' in strmicmp: SELECT/UPDATET/DELETE/INSERT have 
                     }
                     pos += snprintf(&obuff[pos], obl - pos, "%s</%s>", os, (char *)&Ocnames[i*MAXCOL_LEN]);
                 }
-                pos += snprintf(&obuff[pos], obl - pos, "\n  <row>");
+                pos += snprintf(&obuff[pos], obl - pos, "\n  </row>");
             }
             break;
         case 3:                 /* Print Line Mode */
@@ -5885,8 +5884,7 @@ static void etabadd(char type, char *run, int id)
                                     l = no ;
                                 }
                                 cimutex(&etab[no].pmutex);
-                                if ( etab[or].TotalMaxRecords )
-                                    etab[or].mr += etab[or].TotalMaxRecords%etab[or].ps;
+                                
                                 for ( no++, j = 1 ; j < etab[l].ps ; j++ ) {
                                     etabnew ( l );
                                     etab[no].id = no;
@@ -5925,6 +5923,11 @@ static void etabadd(char type, char *run, int id)
                                                 __LINE__);
                                 goto etabadd_exit;
                             }
+
+                            /* append the remainder to original etab */
+                            if (etab[or].TotalMaxRecords)
+                                etab[or].mr += etab[or].TotalMaxRecords%etab[or].ps;
+
                             (void)SQLFreeStmt(Os1, SQL_CLOSE);
                             (void)SQLFreeStmt(Os1, SQL_UNBIND);
                         } else {
@@ -9375,11 +9378,7 @@ static int Oloadbuff(int eid)
             ts += tspdiff ( &tsp1 , &tsp2 ) ;
 #endif
         }
-        if ( (etab[eid].mr - etab[eid].AlreadyLoadRows) < etab[eid].r )
-            /* Reset Rowset size*/
-            if (!SQL_SUCCEEDED(Or=SQLSetStmtAttr(thps[tid].Os,
-                SQL_ATTR_PARAMSET_SIZE, (SQLPOINTER)(etab[eid].mr - etab[eid].AlreadyLoadRows), 0)))
-                Oerr(eid, tid, __LINE__, thps[tid].Os, SQL_HANDLE_STMT);
+
         if ( etab[eid].ar < etab[eid].r )       /* Reset Rowset size */ 
             if (!SQL_SUCCEEDED(Or=SQLSetStmtAttr(thps[tid].Os,
                 SQL_ATTR_PARAMSET_SIZE, (SQLPOINTER)(etab[eid].ar), 0)))
@@ -9686,7 +9685,7 @@ static void Oextract(int eid)
 #ifdef HDFS
         if ( etab[eid].fho ) {
             (*hdfswrite)(hfs, etab[eid].fho, (void *)xbuff, xbuffl);
-        } else if ( etab[eid].fho ) {
+        } else if ( etab[eid].fo ) {
             (void)fwrite ( xbuff, 1, xbuffl, etab[eid].fo );
         }
 #else
@@ -9910,7 +9909,7 @@ static void Oextract(int eid)
         }
 
         if ( etab[eid].flg2 & 04000000 ) {  /* initialize XML output buffer */
-            xbuffl = snprintf(xbuff, xbuffl, "\n<%s>\n",
+            xbuffl = snprintf(xbuff, xbuffl, "\n</%s>\n",
                 etab[eid].src ? etab[eid].src : "select" );
 #ifdef HDFS
             if ( etab[eid].fho ) {
@@ -10710,7 +10709,6 @@ static int Ocopy(int eid)
             etab[i].lstat = 1;                  /* mark loader buffer read_available */
             MutexUnlock(&etab[eid].pmutex);     /* lock shared mutex */
             etab[i].ar = Orespl;                /* inform loader about #rec to insert */
-            etab[i].AlreadyLoadRows += Orespl;
             CondWakeAll(&etab[eid].pcvc);       /* wake-up sleeping loader threads */
 #ifdef ODB_PROFILE
             clock_gettime(CLOCK_MONOTONIC, &tsp2);
@@ -10726,6 +10724,12 @@ static int Ocopy(int eid)
             max -= (long)Orespl;                /* decrese max record counter */
             if ( max <= 0 ) {                   /* max limit has been reached */
                 break ;
+            } else if (max < (long)etab[eid].r) {     /* we do not need to fetch full rowsets any more */
+                if (!SQL_SUCCEEDED(Or = SQLSetStmtAttr(Ostmt, SQL_ATTR_ROW_ARRAY_SIZE,
+                    (SQLPOINTER)(max), 0))) {
+                    Oerr(eid, tid, __LINE__, Ostmt, SQL_HANDLE_STMT);
+                    goto ocopy_exit;
+                }
             }
         }
 #ifdef ODB_PROFILE

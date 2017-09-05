@@ -623,6 +623,7 @@ SQLRETURN CConnect::Connect(SQLCHAR *ServerName,
 		   BOOL			readDSN)
 {
 	char					buffer[256];
+    char                    pwdbuffer[256] = {0};
 	char                    *lasts;
 	short					retCode = SQL_SUCCESS;
 	HWND					currentWindow;
@@ -772,6 +773,10 @@ SQLRETURN CConnect::Connect(SQLCHAR *ServerName,
 	if (m_srvrTCPIPSystem != NULL)
 		m_srvrTCPIPSystem->m_IOCompression = m_IOCompression;
 
+	if (m_asTCPIPSystem != NULL)
+		m_asTCPIPSystem->m_IOCompressionThreshold = m_DSValue.m_DSIOCompressionThreshold;
+	if (m_srvrTCPIPSystem != NULL)
+		m_srvrTCPIPSystem->m_IOCompressionThreshold= m_DSValue.m_DSIOCompressionThreshold;
 	// Set the Assocation Service Object Reference
 	strcpy(m_ASSvc_ObjRef, m_DSValue.m_DSServer);
 	strcpy(buffer,m_DSValue.m_DSServer);
@@ -973,11 +978,12 @@ SQLRETURN CConnect::Connect(SQLCHAR *ServerName,
 		return SQL_ERROR;
 
 	// Get client user name.
-	struct passwd *passwd;           /* man getpwuid */	
-	passwd = getpwuid (getuid());   /* Get the uid of the running processand use it to get a record from /etc/passwd */ 	
-	if (strlen(passwd->pw_name) > 0)
+    struct passwd passwd;           /* man getpwuid */
+    memset(&passwd,'\0',sizeof(struct passwd));
+    struct passwd* tempPwdPtr;
+    if((getpwuid_r(getuid(),&passwd,pwdbuffer,sizeof(pwdbuffer),&tempPwdPtr)) == 0)
 	{
-		inContext.clientUserName = passwd->pw_name;
+		inContext.clientUserName = passwd.pw_name;
 		inContext.inContextOptions1 = inContext.inContextOptions1 | INCONTEXT_OPT1_CLIENT_USERNAME;
 	}
 	else
