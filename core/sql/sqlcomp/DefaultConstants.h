@@ -3913,6 +3913,7 @@ enum DefaultConstants
   EXPLAIN_OPTION_C,
 
   NCM_HBASE_LIMIT_DOP_IN_COSTING,
+  SUPPRESS_CHAR_LIMIT_CHECK,
 
   // This enum constant must be the LAST one in the list; it's a count,
   // not an Attribute (it's not IN DefaultDefaults; it's the SIZE of it)!
